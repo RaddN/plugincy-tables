@@ -168,12 +168,10 @@ jQuery(document).ready(function ($) {
     function updateAddRowVisibility(queryType) {
         const $addRowBtn = $('#add-row');
         const $rowInfoMessage = $('#row-info-message');
-        const $productRowsSection = $('#product-rows-section');
 
         if (queryType === 'products') {
             $addRowBtn.show();
             $rowInfoMessage.show();
-            $productRowsSection.show();
 
             // Show delete buttons for existing rows if more than one row
             if (tableData.rows.length > 1) {
@@ -182,7 +180,6 @@ jQuery(document).ready(function ($) {
         } else {
             $addRowBtn.hide();
             $rowInfoMessage.hide();
-            $productRowsSection.hide();
             $('.delete-row').hide();
 
             // Reset to single row if query type is not 'products'
@@ -326,8 +323,12 @@ jQuery(document).ready(function ($) {
         $("#table-data-input").val(serializeTableData());
     });
 
+    const modal_content = $("#plugincy-element-modal .plugincy-modal-body").html();
+
     $(document).on("click", ".plugincy-add-element", function () {
         currentCell = $(this).closest(".plugincy-editable-cell");
+        $("#plugincy-element-modal .plugincy-modal-body").html(modal_content);
+        $("#plugincy-element-modal .plugincy-modal-header h3").text("Add Element");
         $("#plugincy-element-modal").show();
     });
 
@@ -528,10 +529,47 @@ jQuery(document).ready(function ($) {
         }
     });
 
+    // Handle edit element click
     $(document).on("click", ".plugincy-edit-element", function (e) {
         e.stopPropagation();
-        // TODO: Implement edit functionality
-        console.log("Edit element clicked:", $(this).data("type"));
+
+        const $element = $(this).closest('.plugincy-element');
+        const $cell = $element.closest('.plugincy-editable-cell');
+        const rowIndex = $cell.data("row");
+        const colIndex = $cell.data("col");
+        const elementType = $(this).data("type");
+
+        // Find the element in tableData
+        const cellElements = tableData.rows[rowIndex][colIndex].elements;
+        const elementData = cellElements.find(el => el.type === elementType);
+
+        // Get element configuration
+        const elementConfig = getElementConfig(elementType);
+        if (!elementConfig) {
+            alert('Element configuration not found');
+            return;
+        }
+
+        // Store current editing context
+        window.currentEditContext = {
+            rowIndex: rowIndex,
+            colIndex: colIndex,
+            elementType: elementType,
+            elementData: elementData
+        };
+
+        // Generate and show customization form
+        const formHTML = generateCustomizationForm(elementConfig, elementData.settings || {});
+
+        // Update modal content
+        $("#plugincy-element-modal .plugincy-modal-header h3").text("Edit Element");
+        $("#plugincy-element-modal .plugincy-modal-body").html(formHTML);
+        $("#plugincy-element-modal").show();
+    });
+
+    // Handle range input updates
+    $(document).on('input', '.range-input-wrapper input[type="range"]', function () {
+        $(this).siblings('.range-value').text($(this).val());
     });
 
     $(document).on("click", ".copy-shortcode", function () {
@@ -759,6 +797,169 @@ jQuery(document).ready(function ($) {
         if (event.target.id === "plugincy-element-modal") {
             $("#plugincy-element-modal").hide();
         }
+    });
+
+    // Element customization elements.json file
+    const elementCustomizationConfig = plugincy_ajax.elements_json || [];
+
+    // Function to get element configuration by type
+    function getElementConfig(elementType) {
+        return elementCustomizationConfig.find(config => config.el_type === elementType);
+    }
+
+    // Function to generate customization form HTML
+    function generateCustomizationForm(elementConfig, existingSettings = {}) {
+        let formHTML = `
+        <div class="plugincy-customization-form">
+            <h4>${elementConfig.el_name}</h4>
+            <p class="description">${elementConfig.el_description}</p>
+            <div class="plugincy-form-fields">
+    `;
+
+        elementConfig.el_customization_options.forEach(option => {
+            const fieldId = `custom_${option.name}`;
+            const currentValue = existingSettings[option.name] !== undefined ? existingSettings[option.name] : option.default;
+
+            formHTML += `<div class="plugincy-form-field" data-field="${option.name}">`;
+            formHTML += `<label for="${fieldId}">${option.title}</label>`;
+
+            switch (option.type) {
+                case 'text':
+                    formHTML += `<input type="text" id="${fieldId}" name="${option.name}" value="${currentValue}" />`;
+                    break;
+
+                case 'textarea':
+                    formHTML += `<textarea id="${fieldId}" name="${option.name}" rows="3">${currentValue}</textarea>`;
+                    break;
+
+                case 'number':
+                    const unit = option.unit ? ` <span class="unit">${option.unit}</span>` : '';
+                    const min = option.min !== undefined ? `min="${option.min}"` : '';
+                    const max = option.max !== undefined ? `max="${option.max}"` : '';
+                    formHTML += `<div class="number-input-wrapper">
+                    <input type="number" id="${fieldId}" name="${option.name}" value="${currentValue}" ${min} ${max} />
+                    ${unit}
+                </div>`;
+                    break;
+
+                case 'color':
+                    formHTML += `<input type="color" id="${fieldId}" name="${option.name}" value="${currentValue}" />`;
+                    break;
+
+                case 'checkbox':
+                    const checked = currentValue ? 'checked' : '';
+                    formHTML += `<input type="checkbox" id="${fieldId}" name="${option.name}" value="1" ${checked} />`;
+                    break;
+
+                case 'radio':
+                    option.options.forEach(radioOption => {
+                        const radioChecked = currentValue === radioOption.value ? 'checked' : '';
+                        formHTML += `
+                        <label class="radio-option">
+                            <input type="radio" name="${option.name}" value="${radioOption.value}" ${radioChecked} />
+                            ${radioOption.label}
+                        </label>
+                    `;
+                    });
+                    break;
+
+                case 'select':
+                    formHTML += `<select id="${fieldId}" name="${option.name}">`;
+                    option.options.forEach(selectOption => {
+                        const selected = currentValue === selectOption.value ? 'selected' : '';
+                        formHTML += `<option value="${selectOption.value}" ${selected}>${selectOption.label}</option>`;
+                    });
+                    formHTML += `</select>`;
+                    break;
+
+                case 'file':
+                    formHTML += `<input type="file" id="${fieldId}" name="${option.name}" accept="${option.accept || '*'}" />`;
+                    if (currentValue) {
+                        formHTML += `<div class="current-file">Current: ${currentValue}</div>`;
+                    }
+                    break;
+
+                case 'range':
+                    const rangeMin = option.min || 0;
+                    const rangeMax = option.max || 100;
+                    formHTML += `
+                    <div class="range-input-wrapper">
+                        <input type="range" id="${fieldId}" name="${option.name}" min="${rangeMin}" max="${rangeMax}" value="${currentValue}" />
+                        <span class="range-value">${currentValue}</span>
+                    </div>
+                `;
+                    break;
+            }
+
+            if (option.description) {
+                formHTML += `<p class="field-description">${option.description}</p>`;
+            }
+
+            formHTML += `</div>`;
+        });
+
+        formHTML += `
+            </div>
+            <div class="plugincy-form-actions">
+                <button type="button" class="button button-primary save-element-settings">Save Settings</button>
+                <button type="button" class="button cancel-element-edit">Cancel</button>
+            </div>
+        </div>
+    `;
+
+        return formHTML;
+    }
+
+
+    // Handle save element settings
+    $(document).on("click", ".save-element-settings", function () {
+        const context = window.currentEditContext;
+        if (!context) return;
+
+        // Collect form data
+        const settings = {};
+        $('.plugincy-customization-form .plugincy-form-field').each(function () {
+            const fieldName = $(this).data('field');
+            const $input = $(this).find('input, select, textarea');
+
+            if ($input.attr('type') === 'checkbox') {
+                settings[fieldName] = $input.is(':checked');
+            } else if ($input.attr('type') === 'radio') {
+                const checkedRadio = $(this).find('input[type="radio"]:checked');
+                if (checkedRadio.length) {
+                    settings[fieldName] = checkedRadio.val();
+                }
+            } else {
+                settings[fieldName] = $input.val();
+            }
+        });
+
+        // Update element data
+        const cellElements = tableData.rows[context.rowIndex][context.colIndex].elements;
+        const elementIndex = cellElements.findIndex(el => el.type === context.elementType);
+
+        if (elementIndex !== -1) {
+            cellElements[elementIndex].settings = settings;
+
+            // Update content for custom text
+            if (context.elementType === 'custom_text' && settings.custom_content) {
+                cellElements[elementIndex].content = settings.custom_content;
+            }
+        }
+
+        // Re-render table and refresh preview
+        renderTable();
+        refreshProductPreview();
+
+        // Close modal
+        $("#plugincy-element-modal").hide();
+        window.currentEditContext = null;
+    });
+
+    // Handle cancel edit
+    $(document).on("click", ".cancel-element-edit", function () {
+        $("#plugincy-element-modal").hide();
+        window.currentEditContext = null;
     });
 
     // Initialize everything on page load

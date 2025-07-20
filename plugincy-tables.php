@@ -74,6 +74,7 @@ class PlugincyTables
             wp_localize_script('plugincy-admin-js', 'plugincy_ajax ', array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('plugincy_nonce'),
+                'elements_json' => json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'includes/elements.json'), true)
             ));
         }
     }
