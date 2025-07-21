@@ -602,3 +602,30 @@ tr.plugincy-product-preview-row img {
 .plugincy-form-fields::-webkit-scrollbar-thumb:hover {
     background: #a1a1a1;
 }
+
+.plugincy-tab-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    border-bottom: 1px solid #eee;
+}
+
+.plugincy-tab-item {
+    padding: 12px 16px;
+    cursor: pointer;
+}
+
+.plugincy-tab-item.active {
+    font-weight: bold;
+    border-bottom: 2px solid #007cba;
+}
+
+.plugincy-tab-content {
+    border-top: none;
+}
+.plugincy-tab-content.active {
+    display: block;
+}
+.plugincy-tab-content:not(.active) {
+    display: none;
+}

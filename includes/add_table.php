@@ -14,12 +14,14 @@ class Plugincy_add_table
 
     private $table_name;
     private $elements_json;
+    private $Plugincy_Tables_Helper;
 
     public function __construct()
     {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'plugincy_tables';
         $this->elements_json = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'elements.json'), true);
+        $this->Plugincy_Tables_Helper = new Plugincy_Tables_Helper();
     }
 
     public function admin_page_add_table()
@@ -88,6 +90,10 @@ class Plugincy_add_table
                         <nav class="nav-tab-wrapper">
                             <a href="#" class="nav-tab nav-tab-active" data-tab="columns">Columns</a>
                             <a href="#" class="nav-tab" data-tab="query">Query</a>
+                            <a href="#" class="nav-tab" data-tab="design">Design</a>
+                            <a href="#" class="nav-tab" data-tab="options">Options</a>
+                            <a href="#" class="nav-tab" data-tab="search-filter">Search Filter</a>
+                            <a href="#" class="nav-tab" data-tab="settings">Settings</a>
                         </nav>
 
                         <!-- Columns Tab -->
@@ -493,106 +499,77 @@ class Plugincy_add_table
         $output = '';
 
         $settings = isset($element['settings']) ? $element['settings'] : array();
-
-        // Generate styles from settings
-        $styles = $this->generate_element_styles($settings, $element['type']);
+        $selector = array_keys($settings);
+        $styles = '';
+        foreach ($selector as $key) {
+            // Generate styles from settings
+            if ($key !== "content_settings") {
+                $styles .= $this->Plugincy_Tables_Helper->generate_element_styles($settings[$key], $key);
+            }
+        }
 
         switch ($element['type']) {
             case 'product_title':
-                $output = '<span class="plugincy-element-preview '.$element['type'].'">' . esc_html($wc_product->get_name()) . '</span>';
+                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</span>';
                 break;
 
             case 'product_title_link':
-                $output = '<a href="' . get_permalink($wc_product->get_id()) . '" class="plugincy-element-preview '.$element['type'].'">' . esc_html($wc_product->get_name()) . '</a>';
+                $output = '<a href="' . get_permalink($wc_product->get_id()) . '" class="plugincy-element-preview ' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</a>';
                 break;
 
             case 'product_price':
-                $output = '<span class="plugincy-element-preview '.$element['type'].'">' . $wc_product->get_price_html() . '</span>';
+                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . $wc_product->get_price_html() . '</span>';
                 break;
 
             case 'product_image':
-                $output = '<div class="plugincy-element-preview '.$element['type'].'">' . $wc_product->get_image('thumbnail') . '</div>';
+                $output = '<div class="plugincy-element-preview ' . $element['type'] . '">' . $wc_product->get_image('thumbnail') . '</div>';
                 break;
 
             case 'add_to_cart':
-                $output = '<button class="button plugincy-element-preview '.$element['type'].'">Add to Cart</button>';
+                $output = '<div class="plugincy-element-preview ' . $element['type'] . '"><button class="button">Add to Cart</button></div>';
                 break;
 
             case 'short_description':
-                $output = '<div class="plugincy-element-preview '.$element['type'].'">' . wp_trim_words($wc_product->get_short_description(), 10) . '</div>';
+                $output = '<div class="plugincy-element-preview ' . $element['type'] . '">' . wp_trim_words($wc_product->get_short_description(), 10) . '</div>';
                 break;
 
             case 'product_rating':
                 $rating = $wc_product->get_average_rating();
-                $output = '<div class="plugincy-element-preview '.$element['type'].'">★' . number_format($rating, 1) . '</div>';
+                $output = '<div class="plugincy-element-preview ' . $element['type'] . '">★' . number_format($rating, 1) . '</div>';
                 break;
 
             case 'product_category':
                 $categories = wp_get_post_terms($wc_product->get_id(), 'product_cat', array('fields' => 'names'));
-                $output = '<span class="plugincy-element-preview '.$element['type'].'">' . implode(', ', $categories) . '</span>';
+                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . implode(', ', $categories) . '</span>';
                 break;
 
             case 'product_tags':
                 $tags = wp_get_post_terms($wc_product->get_id(), 'product_tag', array('fields' => 'names'));
-                $output = '<span class="plugincy-element-preview '.$element['type'].'">' . implode(', ', $tags) . '</span>';
+                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . implode(', ', $tags) . '</span>';
                 break;
 
             case 'stock_status':
                 $status = $wc_product->get_stock_status();
-                $output = '<span class="plugincy-element-preview '.$element['type'].' plugincy-stock-' . $status . '">' . ucfirst($status) . '</span>';
+                $output = '<span class="plugincy-element-preview ' . $element['type'] . ' plugincy-stock-' . $status . '">' . ucfirst($status) . '</span>';
                 break;
 
             case 'custom_text':
-                $output = '<span class="plugincy-element-preview '.$element['type'].'">' . esc_html($element['content'] ?? 'Custom Text') . '</span>';
+                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . esc_html($element['content'] ?? 'Custom Text') . '</span>';
                 break;
 
             default:
-                $output = '<span class="plugincy-element-preview '.$element['type'].'">[' . esc_html($element['type']) . ']</span>';
+                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">[' . esc_html($element['type']) . ']</span>';
         }
 
         $output .= '<style>' . $styles . '</style>';
 
-        $output .= json_encode(array(
-            'type' => $element['type'],
-            'settings' => $settings,
-            'row_index' => $row_index
-        ));
+        // $output .= json_encode(array(
+        //     'type' => $element['type'],
+        //     'settings' => $settings,
+        //     'row_index' => $row_index
+        // ));
 
         return $output;
-    }
-
-    // generate_element_styles
-    private function generate_element_styles($settings, $element_type)
-    {
-        $styles = '.plugincy-element-preview.' . $element_type . ' { ';
-
-        if (isset($settings['color']) || isset($settings['text_color']) || isset($settings['link_color'])) {
-            $styles .= 'color: ' . esc_attr($settings['color'] ?? $settings['text_color'] ?? $settings['link_color']) . ';';
-        }
-        if (isset($settings['font_size'])) {
-            $styles .= 'font-size: ' . esc_attr($settings['font_size']) . 'px;';
-        }
-        if (isset($settings['font_weight'])) {
-            $styles .= 'font-weight: ' . esc_attr($settings['font_weight']) . ';';
-        }
-        if (isset($settings['text_align'])) {
-            $styles .= 'text-align: ' . esc_attr($settings['text_align']) . ';';
-        }
-        // underline
-        if (isset($settings['underline']) && $settings['underline']) {
-            $styles .= 'text-decoration: underline;';
-        } else {
-            $styles .= 'text-decoration: none;';
-        }
-
-        $styles .= '}';
-
-        $styles .= '.plugincy-element-preview.' . $element_type . ':hover{ ';
-        if (isset($settings['hover_color'])) {
-            $styles .= 'color: ' . esc_attr($settings['hover_color']) . ';';
-        }
-        $styles .= '}';
-        return $styles;
     }
 
     public function save_table()

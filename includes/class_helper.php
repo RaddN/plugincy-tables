@@ -154,7 +154,22 @@ class Plugincy_Tables_Helper
     }
     private function generate_table_html($table_data, $products)
     {
-        $html = '<div class="plugincy-table-container">';
+
+        $html = '';
+        $html .= "<style>";
+        foreach ($table_data['rows'][0] as $cell) {
+            $cell_settings = $cell['elements'][0];
+            $selector = array_keys($cell_settings['settings']);
+            foreach ($selector as $key) {
+                if ($key !== "content_settings") {
+                    if (isset($cell_settings['settings'][$key])) {
+                        $html .= $this->generate_element_styles($cell_settings['settings'][$key], $key);
+                    }
+                }
+            }
+        }
+        $html .= "</style>";
+        $html .= '<div class="plugincy-table-container">';
         $html .= '<table class="plugincy-product-table">';
 
         if ($table_data['show_header']) {
@@ -189,6 +204,22 @@ class Plugincy_Tables_Helper
         return $html;
     }
 
+    // generate_element_styles
+    public function generate_element_styles($settings, $selector, $class = '')
+    {
+
+        $styles = '';
+
+        // image styles
+        $styles .= $class . $selector . '{ ';
+        foreach ($settings as $property => $value) {
+            $styles .= esc_attr($property) . ': ' . esc_attr($value) . '; ';
+        }
+        $styles .= '}';
+
+        return $styles;
+    }
+
     private function render_cell_content($cell, $product)
     {
         $wc_product = wc_get_product($product->ID);
@@ -202,24 +233,24 @@ class Plugincy_Tables_Helper
         foreach ($cell['elements'] as $element) {
             switch ($element['type']) {
                 case 'product_title':
-                    $content .= '<div class="plugincy-product-title">' . esc_html($wc_product->get_name()) . '</div>';
+                    $content .= '<div class="plugincy-product-title ' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</div>';
                     break;
 
                 case 'product_title_link':
-                    $content .= '<div class="plugincy-product-title-link"><a href="' . get_permalink($product->ID) . '">' . esc_html($wc_product->get_name()) . '</a></div>';
+                    $content .= '<div class="plugincy-product-title-link"><a href="' . get_permalink($product->ID) . '" class="' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</a></div>';
                     break;
 
                 case 'product_price':
-                    $content .= '<div class="plugincy-product-price">' . $wc_product->get_price_html() . '</div>';
+                    $content .= '<div class="plugincy-product-price ' . $element['type'] . '">' . $wc_product->get_price_html() . '</div>';
                     break;
 
                 case 'product_image':
                     $image = $wc_product->get_image('thumbnail');
-                    $content .= '<div class="plugincy-product-image">' . $image . '</div>';
+                    $content .= '<div class="plugincy-product-image ' . $element['type'] . '">' . $image . '</div>';
                     break;
 
                 case 'add_to_cart':
-                    $content .= '<div class="plugincy-add-to-cart">';
+                    $content .= '<div class="plugincy-add-to-cart ' . $element['type'] . '">';
                     $content .= '<form class="cart" method="post" enctype="multipart/form-data">';
                     $content .= '<input type="hidden" name="add-to-cart" value="' . $product->ID . '">';
                     $content .= '<button type="submit" class="single_add_to_cart_button button">Add to Cart</button>';
@@ -228,12 +259,12 @@ class Plugincy_Tables_Helper
                     break;
 
                 case 'short_description':
-                    $content .= '<div class="plugincy-short-description">' . $wc_product->get_short_description() . '</div>';
+                    $content .= '<div class="plugincy-short-description ' . $element['type'] . '">' . $wc_product->get_short_description() . '</div>';
                     break;
 
                 case 'product_rating':
                     $rating = $wc_product->get_average_rating();
-                    $content .= '<div class="plugincy-product-rating">' . wc_get_rating_html($rating) . '</div>';
+                    $content .= '<div class="plugincy-product-rating ' . $element['type'] . '">' . wc_get_rating_html($rating) . '</div>';
                     break;
 
                 case 'product_category':
@@ -243,7 +274,7 @@ class Plugincy_Tables_Helper
                         foreach ($categories as $category) {
                             $cat_names[] = $category->name;
                         }
-                        $content .= '<div class="plugincy-product-category">' . implode(', ', $cat_names) . '</div>';
+                        $content .= '<div class="plugincy-product-category ' . $element['type'] . '">' . implode(', ', $cat_names) . '</div>';
                     }
                     break;
 
@@ -254,17 +285,17 @@ class Plugincy_Tables_Helper
                         foreach ($tags as $tag) {
                             $tag_names[] = $tag->name;
                         }
-                        $content .= '<div class="plugincy-product-tags">' . implode(', ', $tag_names) . '</div>';
+                        $content .= '<div class="plugincy-product-tags ' . $element['type'] . '">' . implode(', ', $tag_names) . '</div>';
                     }
                     break;
 
                 case 'stock_status':
                     $stock_status = $wc_product->get_stock_status();
-                    $content .= '<div class="plugincy-stock-status plugincy-stock-' . $stock_status . '">' . ucfirst($stock_status) . '</div>';
+                    $content .= '<div class="plugincy-stock-status ' . $element['type'] . ' plugincy-stock-' . $stock_status . '">' . ucfirst($stock_status) . '</div>';
                     break;
 
                 case 'custom_text':
-                    $content .= '<div class="plugincy-custom-text">' . esc_html($element['content']) . '</div>';
+                    $content .= '<div class="plugincy-custom-text ' . $element['type'] . '">' . esc_html($element['content']) . '</div>';
                     break;
             }
         }

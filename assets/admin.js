@@ -807,20 +807,44 @@ jQuery(document).ready(function ($) {
         return elementCustomizationConfig.find(config => config.el_type === elementType);
     }
 
+    // switch between tabs
+    $(document).on("click", ".plugincy-tab-item", function () {
+        const tabId = $(this).data("tab");
+
+        // Remove active class from all tabs
+        $(".plugincy-tab-item").removeClass("active");
+        $(".plugincy-tab-content").removeClass("active");
+
+        // Add active class to clicked tab
+        $(this).addClass("active");
+        $("#plugincy-form-" + tabId).addClass("active");
+    });
+
     // Function to generate customization form HTML
     function generateCustomizationForm(elementConfig, existingSettings = {}) {
+        console.log(existingSettings);
         let formHTML = `
         <div class="plugincy-customization-form">
             <h4>${elementConfig.el_name}</h4>
             <p class="description">${elementConfig.el_description}</p>
-            <div class="plugincy-form-fields">
-    `;
-
-        elementConfig.el_customization_options.forEach(option => {
+            <div class="plugincy-tabs">
+                <ul class="plugincy-tab-list">
+                    <li class="plugincy-tab-item active" data-tab="content">Content</li>
+                    <li class="plugincy-tab-item" data-tab="style">Style</li>
+                </ul>
+            </div>
+            <div class="plugincy-tab-content active" id="plugincy-form-content">`;
+        // Content customization options
+        elementConfig.el_customization_options.content.forEach(option => {
+            const optionKeys = Object.keys(option); // Get the key of the option group
             const fieldId = `custom_${option.name}`;
-            const currentValue = existingSettings[option.name] !== undefined ? existingSettings[option.name] : option.default;
-
-            formHTML += `<div class="plugincy-form-field" data-field="${option.name}">`;
+            const currentValue =
+                existingSettings &&
+                    existingSettings["content_settings"] &&
+                    existingSettings["content_settings"][option.name] !== undefined
+                    ? existingSettings["content_settings"][option.name]
+                    : option.default;
+            formHTML += `<div class="plugincy-form-field" data-tab="content" data-unit="${option.unit ?? ''}" data-field="${option.name}">`;
             formHTML += `<label for="${fieldId}">${option.title}</label>`;
 
             switch (option.type) {
@@ -890,12 +914,114 @@ jQuery(document).ready(function ($) {
                 `;
                     break;
             }
-
             if (option.description) {
                 formHTML += `<p class="field-description">${option.description}</p>`;
             }
-
             formHTML += `</div>`;
+        });
+        // End of content customization options
+
+
+        formHTML += `</div>
+            <div class="plugincy-tab-content plugincy-form-fields" id="plugincy-form-style">`;
+
+        elementConfig.el_customization_options.style.forEach(optionGroup => {
+            const optionKeys = Object.keys(optionGroup); // Get the key of the option group
+            optionKeys.forEach(optionKey => {
+                const options = optionGroup[optionKey];
+
+                options.forEach(option => {
+                    const fieldId = `custom_${option.name}`;
+                    const currentValue =
+                        existingSettings &&
+                            existingSettings[optionKey] &&
+                            existingSettings[optionKey][option.name] !== undefined ?
+                            (typeof existingSettings[optionKey][option.name] === 'string' &&
+                                existingSettings[optionKey][option.name].includes('!important') ?
+                                existingSettings[optionKey][option.name].replace('!important', '').trim() :
+                                existingSettings[optionKey][option.name]) :
+                            option.default;
+                    const numericValue = parseInt(currentValue, 10) || 0;
+                    console.log(fieldId + ' ' + currentValue);
+
+                    formHTML += `<div class="plugincy-form-field" data-important = "${option.use_important ?? ''}"  data-checkbox = "${option.checkboxOptions ?? ''}" data-unit="${option.unit ?? ''}" data-selector="${optionKey}" data-field="${option.name}">`;
+                    formHTML += `<label for="${fieldId}">${option.title}</label>`;
+
+                    switch (option.type) {
+                        case 'text':
+                            formHTML += `<input type="text" id="${fieldId}" name="${option.name}" value="${currentValue}" />`;
+                            break;
+
+                        case 'textarea':
+                            formHTML += `<textarea id="${fieldId}" name="${option.name}" rows="3">${currentValue}</textarea>`;
+                            break;
+
+                        case 'number':
+                            const unit = option.unit ? ` <span class="unit">${option.unit}</span>` : '';
+                            const min = option.min !== undefined ? `min="${option.min}"` : '';
+                            const max = option.max !== undefined ? `max="${option.max}"` : '';
+                            formHTML += `<div class="number-input-wrapper">
+                    <input type="number" id="${fieldId}" name="${option.name}" value="${numericValue}" ${min} ${max} />
+                    ${unit}
+                </div>`;
+                            break;
+
+                        case 'color':
+                            formHTML += `<input type="color" id="${fieldId}" name="${option.name}" value="${currentValue}" />`;
+                            break;
+
+                        case 'checkbox':
+                            const checked = option.checkboxOptions && option.checkboxOptions[0] && option.checkboxOptions[0] === currentValue ? 'checked' : '';
+                            formHTML += `<input type="checkbox" id="${fieldId}" name="${option.name}" value="${checked}" ${checked} />`;
+                            break;
+
+                        case 'radio':
+                            option.options.forEach(radioOption => {
+                                const radioChecked = currentValue === radioOption.value ? 'checked' : '';
+                                formHTML += `
+                        <label class="radio-option">
+                            <input type="radio" name="${option.name}" value="${radioOption.value}" ${radioChecked} />
+                            ${radioOption.label}
+                        </label>
+                    `;
+                            });
+                            break;
+
+                        case 'select':
+                            formHTML += `<select id="${fieldId}" name="${option.name}">`;
+                            option.options.forEach(selectOption => {
+                                const selected = currentValue === selectOption.value ? 'selected' : '';
+                                formHTML += `<option value="${selectOption.value}" ${selected}>${selectOption.label}</option>`;
+                            });
+                            formHTML += `</select>`;
+                            break;
+
+                        case 'file':
+                            formHTML += `<input type="file" id="${fieldId}" name="${option.name}" accept="${option.accept || '*'}" />`;
+                            if (currentValue) {
+                                formHTML += `<div class="current-file">Current: ${currentValue}</div>`;
+                            }
+                            break;
+
+                        case 'range':
+                            const rangeMin = option.min || 0;
+                            const rangeMax = option.max || 100;
+                            formHTML += `
+                    <div class="range-input-wrapper">
+                        <input type="range" id="${fieldId}" name="${option.name}" min="${rangeMin}" max="${rangeMax}" value="${currentValue}" />
+                        <span class="range-value">${currentValue}</span>
+                    </div>
+                `;
+                            break;
+                    }
+
+                    if (option.description) {
+                        formHTML += `<p class="field-description">${option.description}</p>`;
+                    }
+
+                    formHTML += `</div>`;
+                });
+            });
         });
 
         formHTML += `
@@ -920,17 +1046,30 @@ jQuery(document).ready(function ($) {
         const settings = {};
         $('.plugincy-customization-form .plugincy-form-field').each(function () {
             const fieldName = $(this).data('field');
+            let selector = $(this).data('selector');
+            let use_important = $(this).data('important');
+            let checkboxOptions = $(this).data('checkbox') ?? ''; // Get the string from data attribute
+            let checkboxArray = checkboxOptions.split(','); // Convert the string to an array
+            const tab = $(this).data('tab');
+            if (tab === "content") {
+                selector = "content_settings";
+            }
+            const unit = $(this).data('unit') || '';
             const $input = $(this).find('input, select, textarea');
+            if (!settings[selector]) {
+                settings[selector] = {};
+            }
 
             if ($input.attr('type') === 'checkbox') {
-                settings[fieldName] = $input.is(':checked');
+                settings[selector][fieldName] = checkboxArray[$input.is(':checked') ? 0 : 1] + (use_important === true ? `!important` : '');
+                console.log(settings[selector][fieldName]);
             } else if ($input.attr('type') === 'radio') {
                 const checkedRadio = $(this).find('input[type="radio"]:checked');
                 if (checkedRadio.length) {
-                    settings[fieldName] = checkedRadio.val();
+                    settings[selector][fieldName] = checkedRadio.val() + (use_important === true ? `!important` : '');
                 }
             } else {
-                settings[fieldName] = $input.val();
+                settings[selector][fieldName] = $input.val() + (unit ? `${unit}` : '') + (use_important === true ? `!important` : '');
             }
         });
 
