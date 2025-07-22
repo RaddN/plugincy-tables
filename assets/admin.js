@@ -222,7 +222,7 @@ jQuery(document).ready(function ($) {
 
     function renderTable() {
         const $table = $("#plugincy-editable-table");
-        const $header = $table.find("thead tr");
+        const $header = $table.find("thead tr:nth-child(2)");
         const $body = $table.find("tbody");
         const $footer = $table.find("tfoot tr");
 
@@ -233,12 +233,16 @@ jQuery(document).ready(function ($) {
         <th contenteditable="true" class="plugincy-editable-header" data-index="${index}">
             ${header}
             <span class="plugincy-column-actions">
+                <span class="plugincy-edit-element" data-type="" title="Edit Element">✏️</span>
                 <span class="plugincy-delete-column" data-index="${index}" title="Delete Column">🗑️</span>
             </span>
         </th>
     `);
         });
-        $header.append(`<th class="plugincy-action-column">Actions</th>`);
+        $header.append(`<th class="plugincy-action-column">
+            <span class="button"><span class="dashicons dashicons-admin-customizer"></span></span>
+            <span class="button"><span class="dashicons dashicons-visibility"></span></span>
+            </th>`);
 
         // Render body
         $body.find('tr').first().remove();
@@ -267,7 +271,9 @@ jQuery(document).ready(function ($) {
             // Show delete button only if query type is 'products' and there's more than one row
             const queryType = $('#query-type').val();
             const showDeleteBtn = (queryType === 'products' && tableData.rows.length > 1) ? '' : 'style="display:none;"';
-            $row.append(`<td class="plugincy-action-column"><button type="button" class="button button-small delete-row" ${showDeleteBtn}>Delete</button></td>`);
+            $row.append(`<td class="plugincy-action-column">
+                <button type="button" class="button button-small delete-row" ${showDeleteBtn}>Delete</button>
+                </td>`);
             $body.prepend($row);
         });
 
@@ -276,7 +282,10 @@ jQuery(document).ready(function ($) {
         tableData.footers.forEach(function (footer, index) {
             $footer.append(`<td contenteditable="true" class="plugincy-editable-footer" data-index="${index}">${footer}</td>`);
         });
-        $footer.append(`<td></td>`);
+        $footer.append(`<td>
+            <span class="button"><span class="dashicons dashicons-admin-customizer"></span></span>
+            <span class="button"><span class="dashicons dashicons-visibility"></span></span>
+            </td>`);
 
         // Update visibility settings
         $("#show-header").prop("checked", tableData.show_header);
@@ -494,12 +503,12 @@ jQuery(document).ready(function ($) {
 
     $(document).on("blur", ".plugincy-editable-header", function () {
         const index = $(this).data("index");
-        tableData.headers[index] = $(this).text();
+        tableData.headers[index] = $(this).text().replace(/\n/g, '');
     });
 
     $(document).on("blur", ".plugincy-editable-footer", function () {
         const index = $(this).data("index");
-        tableData.footers[index] = $(this).text();
+        tableData.footers[index] = $(this).text().replace(/\n/g, '');
     });
 
     $(document).on("change", "#show-header", function () {
@@ -538,6 +547,19 @@ jQuery(document).ready(function ($) {
         const rowIndex = $cell.data("row");
         const colIndex = $cell.data("col");
         const elementType = $(this).data("type");
+
+
+
+        if (elementType === "product_table") {
+            tableData.rows[rowIndex] = [];
+            tableData.rows[rowIndex][colIndex] = {};
+            tableData.rows[rowIndex][colIndex]["elements"] = [
+                {
+                    "content": "",
+                    "type": "product_table"
+                }
+            ];
+        }
 
         // Find the element in tableData
         const cellElements = tableData.rows[rowIndex][colIndex].elements;
@@ -822,7 +844,6 @@ jQuery(document).ready(function ($) {
 
     // Function to generate customization form HTML
     function generateCustomizationForm(elementConfig, existingSettings = {}) {
-        console.log(existingSettings);
         let formHTML = `
         <div class="plugincy-customization-form">
             <h4>${elementConfig.el_name}</h4>
@@ -844,7 +865,7 @@ jQuery(document).ready(function ($) {
                     existingSettings["content_settings"][option.name] !== undefined
                     ? existingSettings["content_settings"][option.name]
                     : option.default;
-            formHTML += `<div class="plugincy-form-field" data-tab="content" data-unit="${option.unit ?? ''}" data-field="${option.name}">`;
+            formHTML += `<div class="plugincy-form-field" data-tab="content" data-checkbox = "${option.checkboxOptions ?? ''}" data-unit="${option.unit ?? ''}" data-field="${option.name}">`;
             formHTML += `<label for="${fieldId}">${option.title}</label>`;
 
             switch (option.type) {
@@ -871,7 +892,7 @@ jQuery(document).ready(function ($) {
                     break;
 
                 case 'checkbox':
-                    const checked = currentValue ? 'checked' : '';
+                    const checked = option.checkboxOptions && option.checkboxOptions[0] && option.checkboxOptions[0] === currentValue ? 'checked' : '';
                     formHTML += `<input type="checkbox" id="${fieldId}" name="${option.name}" value="1" ${checked} />`;
                     break;
 
@@ -942,7 +963,6 @@ jQuery(document).ready(function ($) {
                                 existingSettings[optionKey][option.name]) :
                             option.default;
                     const numericValue = parseInt(currentValue, 10) || 0;
-                    console.log(fieldId + ' ' + currentValue);
 
                     formHTML += `<div class="plugincy-form-field" data-important = "${option.use_important ?? ''}"  data-checkbox = "${option.checkboxOptions ?? ''}" data-unit="${option.unit ?? ''}" data-selector="${optionKey}" data-field="${option.name}">`;
                     formHTML += `<label for="${fieldId}">${option.title}</label>`;
@@ -972,7 +992,7 @@ jQuery(document).ready(function ($) {
 
                         case 'checkbox':
                             const checked = option.checkboxOptions && option.checkboxOptions[0] && option.checkboxOptions[0] === currentValue ? 'checked' : '';
-                            formHTML += `<input type="checkbox" id="${fieldId}" name="${option.name}" value="${checked}" ${checked} />`;
+                            formHTML += `<input type="checkbox" id="${fieldId}" name="${option.name}" value="1" ${checked} />`;
                             break;
 
                         case 'radio':
@@ -1062,7 +1082,6 @@ jQuery(document).ready(function ($) {
 
             if ($input.attr('type') === 'checkbox') {
                 settings[selector][fieldName] = checkboxArray[$input.is(':checked') ? 0 : 1] + (use_important === true ? `!important` : '');
-                console.log(settings[selector][fieldName]);
             } else if ($input.attr('type') === 'radio') {
                 const checkedRadio = $(this).find('input[type="radio"]:checked');
                 if (checkedRadio.length) {
@@ -1075,6 +1094,7 @@ jQuery(document).ready(function ($) {
 
         // Update element data
         const cellElements = tableData.rows[context.rowIndex][context.colIndex].elements;
+
         const elementIndex = cellElements.findIndex(el => el.type === context.elementType);
 
         if (elementIndex !== -1) {

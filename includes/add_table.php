@@ -106,6 +106,11 @@ class Plugincy_add_table
                                     <div class="plugincy-table-controls">
                                         <button type="button" class="button" id="add-column">Add Column</button>
                                         <button type="button" class="button" id="add-row" style="display:none;">Add Row</button>
+                                        <div class="plugincy-editable-cell" data-row="1" data-col="0">
+                                            <div class="plugincy-element" style="cursor: pointer;padding: 0;background: transparent;">
+                                                <button type="button" class="button plugincy-edit-element" data-type="product_table" id="style-table" title="Edit Table">Customize Table</button>
+                                            </div>
+                                        </div>
                                         <div class="plugincy-row-info" id="row-info-message" style="display:none;">
                                             <p><strong>Note:</strong> Additional rows will be automatically generated based on your product query settings.</p>
                                         </div>
@@ -115,12 +120,19 @@ class Plugincy_add_table
                                         <table id="plugincy-editable-table" class="plugincy-editable-table">
                                             <thead id="table-header">
                                                 <tr>
+                                                    <th colspan="5"></th>
+                                                    <th class="plugincy-action-column">Actions</th>
+                                                </tr>
+                                                <tr>
                                                     <th contenteditable="true" class="plugincy-editable-header">Column 1</th>
                                                     <th contenteditable="true" class="plugincy-editable-header">Column 2</th>
                                                     <th contenteditable="true" class="plugincy-editable-header">Column 3</th>
                                                     <th contenteditable="true" class="plugincy-editable-header">Column 4</th>
                                                     <th contenteditable="true" class="plugincy-editable-header">Column 5</th>
-                                                    <th class="plugincy-action-column">Actions</th>
+                                                    <th>
+                                                        <span class="button"><span class="dashicons dashicons-admin-customizer"></span></span>
+                                                        <span class="button"><span class="dashicons dashicons-visibility"></span></span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody id="table-body">
@@ -384,62 +396,6 @@ class Plugincy_add_table
         <?php endif; ?>
 <?php
     }
-    public function get_preview_products($query_settings, $excluded_products = array())
-    {
-        $args = array(
-            'post_type' => 'product',
-            'post_status' => 'publish',
-            'posts_per_page' => isset($query_settings['products_per_page']) ? intval($query_settings['products_per_page']) : 10,
-            'orderby' => isset($query_settings['order_by']) ? $query_settings['order_by'] : 'date',
-            'order' => isset($query_settings['order']) ? $query_settings['order'] : 'DESC'
-        );
-
-        // Exclude products
-        if (!empty($excluded_products)) {
-            $args['post__not_in'] = $excluded_products;
-        }
-
-        // Handle different query types
-        $query_type = isset($query_settings['query_type']) ? $query_settings['query_type'] : 'all';
-
-        switch ($query_type) {
-            case 'category':
-                if (!empty($query_settings['selected_categories'])) {
-                    $args['tax_query'] = array(
-                        array(
-                            'taxonomy' => 'product_cat',
-                            'field' => 'slug',
-                            'terms' => $query_settings['selected_categories'],
-                            'operator' => 'IN'
-                        )
-                    );
-                }
-                break;
-
-            case 'tags':
-                if (!empty($query_settings['selected_tags'])) {
-                    $args['tax_query'] = array(
-                        array(
-                            'taxonomy' => 'product_tag',
-                            'field' => 'slug',
-                            'terms' => $query_settings['selected_tags'],
-                            'operator' => 'IN'
-                        )
-                    );
-                }
-                break;
-
-            case 'products':
-                if (!empty($query_settings['selected_products'])) {
-                    $args['post__in'] = $query_settings['selected_products'];
-                    $args['orderby'] = 'post__in';
-                }
-                break;
-        }
-
-        $query = new WP_Query($args);
-        return $query->posts;
-    }
 
     // Add this AJAX handler method to the Plugincy_add_table class
 
@@ -451,10 +407,10 @@ class Plugincy_add_table
         $excluded_products = isset($_POST['excluded_products']) ? array_map('intval', $_POST['excluded_products']) : array();
         $table_data = isset($_POST['table_data']) ? json_decode(stripslashes($_POST['table_data']), true) : null;
 
-        $products = $this->get_preview_products($query_settings, $excluded_products);
+        $products = $this->Plugincy_Tables_Helper->get_products_for_table([], $query_settings, $excluded_products);
 
         $html = '';
-        $product_index = 0;
+        $row_count = 1;
 
         foreach ($products as $product) {
             $wc_product = wc_get_product($product->ID);
@@ -469,13 +425,16 @@ class Plugincy_add_table
                         $html .= '<td>';
                         if (isset($cell['elements']) && !empty($cell['elements'])) {
                             foreach ($cell['elements'] as $element) {
-                                $html .= $this->render_element($element, $wc_product, $product_index);
+                                $html .= $this->render_element($element, $wc_product, $row_count);
                             }
                         }
                         $html .= '</td>';
                     }
 
-                    $html .= '<td><button type="button" class="button button-small remove-product" data-product-id="' . $product->ID . '">Remove</button></td>';
+                    $html .= '<td>
+                    <span class="button"><span class="dashicons dashicons-admin-customizer"></span></span>
+                    <button type="button" class="button button-small remove-product" data-product-id="' . $product->ID . '">Remove</button>
+                    </td>';
                 } else {
                     // Fallback structure
                     $image = $wc_product->get_image('thumbnail');
@@ -487,14 +446,14 @@ class Plugincy_add_table
                     $html .= '<td><button type="button" class="button button-small remove-product" data-product-id="' . $product->ID . '">Remove</button></td>';
                 }
                 $html .= '</tr>';
-                $product_index++;
+                $row_count++;
             }
         }
 
         wp_send_json_success($html);
     }
 
-    private function render_element($element, $wc_product, $row_index = 0)
+    private function render_element($element, $wc_product, $row_count)
     {
         $output = '';
 
@@ -508,58 +467,7 @@ class Plugincy_add_table
             }
         }
 
-        switch ($element['type']) {
-            case 'product_title':
-                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</span>';
-                break;
-
-            case 'product_title_link':
-                $output = '<a href="' . get_permalink($wc_product->get_id()) . '" class="plugincy-element-preview ' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</a>';
-                break;
-
-            case 'product_price':
-                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . $wc_product->get_price_html() . '</span>';
-                break;
-
-            case 'product_image':
-                $output = '<div class="plugincy-element-preview ' . $element['type'] . '">' . $wc_product->get_image('thumbnail') . '</div>';
-                break;
-
-            case 'add_to_cart':
-                $output = '<div class="plugincy-element-preview ' . $element['type'] . '"><button class="button">Add to Cart</button></div>';
-                break;
-
-            case 'short_description':
-                $output = '<div class="plugincy-element-preview ' . $element['type'] . '">' . wp_trim_words($wc_product->get_short_description(), 10) . '</div>';
-                break;
-
-            case 'product_rating':
-                $rating = $wc_product->get_average_rating();
-                $output = '<div class="plugincy-element-preview ' . $element['type'] . '">★' . number_format($rating, 1) . '</div>';
-                break;
-
-            case 'product_category':
-                $categories = wp_get_post_terms($wc_product->get_id(), 'product_cat', array('fields' => 'names'));
-                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . implode(', ', $categories) . '</span>';
-                break;
-
-            case 'product_tags':
-                $tags = wp_get_post_terms($wc_product->get_id(), 'product_tag', array('fields' => 'names'));
-                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . implode(', ', $tags) . '</span>';
-                break;
-
-            case 'stock_status':
-                $status = $wc_product->get_stock_status();
-                $output = '<span class="plugincy-element-preview ' . $element['type'] . ' plugincy-stock-' . $status . '">' . ucfirst($status) . '</span>';
-                break;
-
-            case 'custom_text':
-                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">' . esc_html($element['content'] ?? 'Custom Text') . '</span>';
-                break;
-
-            default:
-                $output = '<span class="plugincy-element-preview ' . $element['type'] . '">[' . esc_html($element['type']) . ']</span>';
-        }
+        $output = $this->Plugincy_Tables_Helper->render_cell_content_html($wc_product, $element, $row_count);
 
         $output .= '<style>' . $styles . '</style>';
 

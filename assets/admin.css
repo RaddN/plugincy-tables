@@ -282,6 +282,8 @@
 
 .plugincy-modal-body {
   padding: 20px;
+  overflow-y: scroll;
+  max-height: 75vh;
 }
 
 .plugincy-element-options {
@@ -444,188 +446,224 @@ tr.plugincy-product-preview-row img {
   border-left: 3px solid #007cba;
 }
 
-
-
-
-
-
-
-
-
-
-
 /* Element Customization Form Styles */
 .plugincy-customization-form {
-    max-width: 500px;
+  max-width: 500px;
 }
 
 .plugincy-customization-form h4 {
-    margin: 0 0 10px 0;
-    color: #333;
-    font-size: 18px;
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 18px;
 }
 
 .plugincy-form-fields {
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
 }
 
 .plugincy-form-field {
-    margin-bottom: 20px;
-    padding: 15px;
-    border: 1px solid #e1e1e1;
-    border-radius: 4px;
-    background: #f9f9f9;
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #e1e1e1;
+  border-radius: 4px;
+  background: #f9f9f9;
 }
 
 .plugincy-form-field label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #333;
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
 }
 
 .plugincy-form-field input,
 .plugincy-form-field select,
 .plugincy-form-field textarea {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .plugincy-form-field input[type="checkbox"] {
-    width: auto;
-    margin-right: 8px;
+  width: auto;
+  margin-right: 8px;
 }
 
 .plugincy-form-field input[type="color"] {
-    width: 60px;
-    height: 40px;
-    padding: 2px;
-    border-radius: 4px;
+  width: 60px;
+  height: 40px;
+  padding: 2px;
+  border-radius: 4px;
 }
 
 .number-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .number-input-wrapper input {
-    flex: 1;
-    max-width: 100px;
+  flex: 1;
+  max-width: 100px;
 }
 
 .number-input-wrapper .unit {
-    font-size: 12px;
-    color: #666;
-    font-weight: 500;
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
 }
 
 .range-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .range-input-wrapper input {
-    flex: 1;
+  flex: 1;
 }
 
 .range-value {
-    min-width: 40px;
-    text-align: center;
-    background: #e1e1e1;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 12px;
+  min-width: 40px;
+  text-align: center;
+  background: #e1e1e1;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
 }
 
 .radio-option {
-    display: block;
-    margin: 5px 0;
-    font-weight: normal;
+  display: block;
+  margin: 5px 0;
+  font-weight: normal;
 }
 
 .radio-option input {
-    width: auto;
-    margin-right: 8px;
+  width: auto;
+  margin-right: 8px;
 }
 
 .field-description {
-    font-size: 12px;
-    color: #666;
-    margin: 8px 0 0 0;
-    font-style: italic;
+  font-size: 12px;
+  color: #666;
+  margin: 8px 0 0 0;
+  font-style: italic;
 }
 
 .current-file {
-    margin-top: 8px;
-    padding: 6px 10px;
-    background: #e7f3ff;
-    border-radius: 3px;
-    font-size: 12px;
-    color: #0073aa;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #e7f3ff;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #0073aa;
 }
 
 .plugincy-form-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #e1e1e1;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e1e1e1;
 }
 
 .plugincy-form-actions .button {
-    padding: 8px 16px;
+  padding: 8px 16px;
 }
 
 /* Scrollbar styling for form fields */
 .plugincy-form-fields::-webkit-scrollbar {
-    width: 6px;
+  width: 6px;
 }
 
 .plugincy-form-fields::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
+  background: #f1f1f1;
+  border-radius: 3px;
 }
 
 .plugincy-form-fields::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
+  background: #c1c1c1;
+  border-radius: 3px;
 }
 
 .plugincy-form-fields::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
+  background: #a1a1a1;
 }
 
 .plugincy-tab-list {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    border-bottom: 1px solid #eee;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  border-bottom: 1px solid #eee;
 }
 
 .plugincy-tab-item {
-    padding: 12px 16px;
-    cursor: pointer;
+  padding: 12px 16px;
+  cursor: pointer;
 }
 
 .plugincy-tab-item.active {
-    font-weight: bold;
-    border-bottom: 2px solid #007cba;
+  font-weight: bold;
+  border-bottom: 2px solid #007cba;
 }
 
 .plugincy-tab-content {
-    border-top: none;
+  border-top: none;
 }
 .plugincy-tab-content.active {
-    display: block;
+  display: block;
 }
 .plugincy-tab-content:not(.active) {
-    display: none;
+  display: none;
+}
+
+.star-rating::before {
+  content: "\73\73\73\73\73";
+  color: #d3ced2;
+  float: left;
+  top: 0;
+  left: 0;
+  position: absolute;
+}
+
+.star-rating span::before {
+  content: "\53\53\53\53\53";
+  top: 0;
+  position: absolute;
+  left: 0;
+}
+
+.review-rating {
+  display: flex;
+  align-items: center;
+  order: 2;
+}
+
+.star-rating {
+  float: right;
+  overflow: hidden;
+  position: relative;
+  height: 2em;
+  line-height: 1;
+  font-size: 1em;
+  width: 8.4em;
+  font-family: star, serif;
+}
+
+.star-rating {
+  margin-right: 10px;
+}
+
+.star-rating span {
+  overflow: hidden;
+  float: left;
+  top: 0;
+  left: 0;
+  position: absolute;
+  padding-top: 1.5em;
 }

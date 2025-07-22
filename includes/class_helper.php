@@ -50,19 +50,26 @@ class Plugincy_Tables_Helper
         return $this->generate_table_html($table_data, $products);
     }
 
-    private function get_products_for_table($atts)
+    public function get_products_for_table($atts = [], $query_settings = [], $excluded_products = [])
     {
-        global $wpdb;
+        if (empty($query_settings)) {
 
-        // Get table data to access query settings
-        $table = $wpdb->get_row($wpdb->prepare("SELECT * FROM $this->table_name WHERE id = %d", $atts['id']));
+            global $wpdb;
 
-        if (!$table) {
-            return array();
+            // Get table data to access query settings
+            $table = $wpdb->get_row($wpdb->prepare("SELECT * FROM $this->table_name WHERE id = %d", $atts['id']));
+
+            if (!$table) {
+                return array();
+            }
+
+            $table_data = json_decode($table->table_data, true);
+            $query_settings = isset($table_data['query_settings']) ? $table_data['query_settings'] : array();
+
+            if (empty($excluded_products)) {
+                $excluded_products = isset($query_settings['excluded_products']) ? $query_settings['excluded_products'] : [];
+            }
         }
-
-        $table_data = json_decode($table->table_data, true);
-        $query_settings = isset($table_data['query_settings']) ? $table_data['query_settings'] : array();
 
         $args = array(
             'post_type' => 'product',
@@ -72,9 +79,9 @@ class Plugincy_Tables_Helper
             'order' => isset($query_settings['order']) ? $query_settings['order'] : 'DESC'
         );
 
-        // Add excluded products - THIS IS THE NEW ADDITION
-        if (!empty($query_settings['excluded_products'])) {
-            $args['post__not_in'] = $query_settings['excluded_products'];
+        // Exclude products
+        if (!empty($excluded_products)) {
+            $args['post__not_in'] = $excluded_products;
         }
 
         // Handle different query types
@@ -109,57 +116,23 @@ class Plugincy_Tables_Helper
 
             case 'products':
                 if (!empty($query_settings['selected_products'])) {
-                    $selected_products = $query_settings['selected_products'];
-
-                    // Remove excluded products from selected products
-                    if (!empty($query_settings['excluded_products'])) {
-                        $selected_products = array_diff($selected_products, $query_settings['excluded_products']);
-                    }
-
-                    if (!empty($selected_products)) {
-                        $args['post__in'] = $selected_products;
-                        $args['orderby'] = 'post__in';
-                    }
+                    $args['post__in'] = $query_settings['selected_products'];
+                    $args['orderby'] = 'post__in';
                 }
                 break;
-
-            case 'all':
-            default:
-                // No additional filters needed for all products
-                break;
-        }
-
-        // Handle shortcode attributes for backward compatibility
-        if (!empty($atts['products'])) {
-            $product_ids = array_map('intval', explode(',', $atts['products']));
-            $args['post__in'] = $product_ids;
-        }
-
-        if (!empty($atts['category'])) {
-            $args['tax_query'] = array(
-                array(
-                    'taxonomy' => 'product_cat',
-                    'field' => 'slug',
-                    'terms' => $atts['category']
-                )
-            );
-        }
-
-        if (!empty($atts['limit'])) {
-            $args['posts_per_page'] = intval($atts['limit']);
         }
 
         $query = new WP_Query($args);
         return $query->posts;
     }
-    private function generate_table_html($table_data, $products)
+    public function generate_table_html($table_data, $products)
     {
 
         $html = '';
         $html .= "<style>";
         foreach ($table_data['rows'][0] as $cell) {
             $cell_settings = $cell['elements'][0];
-            $selector = array_keys($cell_settings['settings']);
+            $selector = isset($cell_settings['settings']) ? array_keys($cell_settings['settings']) : [];
             foreach ($selector as $key) {
                 if ($key !== "content_settings") {
                     if (isset($cell_settings['settings'][$key])) {
@@ -181,12 +154,14 @@ class Plugincy_Tables_Helper
         }
 
         $html .= '<tbody>';
+        $row_count = 1;
         foreach ($products as $product) {
             $html .= '<tr>';
             foreach ($table_data['rows'][0] as $cell) {
-                $html .= '<td>' . $this->render_cell_content($cell, $product) . '</td>';
+                $html .= '<td>' . $this->render_cell_content($cell, $product, $row_count) . '</td>';
             }
             $html .= '</tr>';
+            $row_count++;
         }
         $html .= '</tbody>';
 
@@ -220,7 +195,7 @@ class Plugincy_Tables_Helper
         return $styles;
     }
 
-    private function render_cell_content($cell, $product)
+    public function render_cell_content($cell, $product, $row_count)
     {
         $wc_product = wc_get_product($product->ID);
 
@@ -231,73 +206,103 @@ class Plugincy_Tables_Helper
         $content = '';
 
         foreach ($cell['elements'] as $element) {
-            switch ($element['type']) {
-                case 'product_title':
-                    $content .= '<div class="plugincy-product-title ' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</div>';
-                    break;
+            $content .= $this->render_cell_content_html($wc_product, $element, $row_count);
+        }
+        return $content;
+    }
 
-                case 'product_title_link':
-                    $content .= '<div class="plugincy-product-title-link"><a href="' . get_permalink($product->ID) . '" class="' . $element['type'] . '">' . esc_html($wc_product->get_name()) . '</a></div>';
-                    break;
+    public function render_cell_content_html($wc_product, $element, $row_count = 0)
+    {
 
-                case 'product_price':
-                    $content .= '<div class="plugincy-product-price ' . $element['type'] . '">' . $wc_product->get_price_html() . '</div>';
-                    break;
+        $content_settings = isset($element["settings"]) && isset($element["settings"]["content_settings"]) ? $element["settings"]["content_settings"] : [];
+        error_log(json_encode($element));
+        $content = '';
+        switch ($element['type']) {
+            case 'product_title':
+                $content = '<div class="plugincy-product-title ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . esc_html($wc_product->get_name()) . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
 
-                case 'product_image':
-                    $image = $wc_product->get_image('thumbnail');
-                    $content .= '<div class="plugincy-product-image ' . $element['type'] . '">' . $image . '</div>';
-                    break;
+            case 'product_title_link':
+                $content = '<div class="plugincy-product-title-link"><a href="' . get_permalink($wc_product->get_id()) . '" class="' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . esc_html($wc_product->get_name()) . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></a></div>';
+                break;
 
-                case 'add_to_cart':
-                    $content .= '<div class="plugincy-add-to-cart ' . $element['type'] . '">';
-                    $content .= '<form class="cart" method="post" enctype="multipart/form-data">';
-                    $content .= '<input type="hidden" name="add-to-cart" value="' . $product->ID . '">';
-                    $content .= '<button type="submit" class="single_add_to_cart_button button">Add to Cart</button>';
-                    $content .= '</form>';
-                    $content .= '</div>';
-                    break;
+            case 'product_price':
+                $content = '<div class="plugincy-product-price ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . $wc_product->get_price_html() . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
 
-                case 'short_description':
-                    $content .= '<div class="plugincy-short-description ' . $element['type'] . '">' . $wc_product->get_short_description() . '</div>';
-                    break;
+            case 'product_image':
+                $image = $wc_product->get_image('thumbnail');
+                $content = '<div class="plugincy-product-image ' . $element['type'] . '">' . $image . '</div>';
+                break;
 
-                case 'product_rating':
-                    $rating = $wc_product->get_average_rating();
-                    $content .= '<div class="plugincy-product-rating ' . $element['type'] . '">' . wc_get_rating_html($rating) . '</div>';
-                    break;
+            case 'add_to_cart':
+                $content .= '<div class="plugincy-add-to-cart ' . $element['type'] . '">';
+                $content .= '<form class="cart" method="post" enctype="multipart/form-data">';
+                $content .= '<input type="hidden" name="add-to-cart" value="' . $wc_product->get_id() . '">';
+                $content .= '<button type="submit" class="single_add_to_cart_button button">' . (isset($content_settings["button_text"]) ? esc_html($content_settings["button_text"]) : 'Add to Cart') . '</button>';
+                $content .= '</form>';
+                $content .= '</div>';
+                break;
+            
+            case 'view_details':
+                $content = '<div class="plugincy-view-details"><a href="' . get_permalink($wc_product->get_id()) . '" class="'.(isset($content_settings["button_type"]) ? esc_html($content_settings["button_type"]) : ''). $element['type'] . '">'.(isset($content_settings["button_text"]) ? esc_html($content_settings["button_text"]) : 'View Details').'</a></div>';
+                break;
+            
 
-                case 'product_category':
-                    $categories = get_the_terms($product->ID, 'product_cat');
-                    if ($categories && !is_wp_error($categories)) {
-                        $cat_names = array();
-                        foreach ($categories as $category) {
-                            $cat_names[] = $category->name;
-                        }
-                        $content .= '<div class="plugincy-product-category ' . $element['type'] . '">' . implode(', ', $cat_names) . '</div>';
+            case 'short_description':
+                $content = '<div class="plugincy-short-description ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . $wc_product->get_short_description() . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
+
+            case 'product_rating':
+                $rating = $wc_product->get_average_rating();
+                $content = '<div class="plugincy-product-rating ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . wc_get_rating_html($rating) . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
+
+            case 'product_category':
+                $categories = get_the_terms($wc_product->get_id(), 'product_cat');
+                if ($categories && !is_wp_error($categories)) {
+                    $cat_names = array();
+                    foreach ($categories as $category) {
+                        $cat_names[] = $category->name;
                     }
-                    break;
+                    $seperator = isset($content_settings["seperator"]) ? esc_html($content_settings["seperator"]) : ', ';
+                    $formatted_names = implode($seperator, array_map(function ($name) {
+                        return '<span class="cat_name">' . $name . '</span>';
+                    }, $cat_names));
+                    $content = '<div class="plugincy-product-category ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . $formatted_names . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                }
+                break;
 
-                case 'product_tags':
-                    $tags = get_the_terms($product->ID, 'product_tag');
-                    if ($tags && !is_wp_error($tags)) {
-                        $tag_names = array();
-                        foreach ($tags as $tag) {
-                            $tag_names[] = $tag->name;
-                        }
-                        $content .= '<div class="plugincy-product-tags ' . $element['type'] . '">' . implode(', ', $tag_names) . '</div>';
+            case 'product_tags':
+                $tags = get_the_terms($wc_product->get_id(), 'product_tag');
+                if ($tags && !is_wp_error($tags)) {
+                    $tag_names = array();
+                    foreach ($tags as $tag) {
+                        $tag_names[] = $tag->name;
                     }
-                    break;
+                    $seperator = isset($content_settings["seperator"]) ? esc_html($content_settings["seperator"]) : ', ';
+                    $formatted_names = implode($seperator, array_map(function ($name) {
+                        return '<span class="cat_name">' . $name . '</span>';
+                    }, $tag_names));
+                    $content = '<div class="plugincy-product-tags ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . $formatted_names . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                }
+                break;
 
-                case 'stock_status':
-                    $stock_status = $wc_product->get_stock_status();
-                    $content .= '<div class="plugincy-stock-status ' . $element['type'] . ' plugincy-stock-' . $stock_status . '">' . ucfirst($stock_status) . '</div>';
-                    break;
+            case 'stock_status':
+                $stock_status = $wc_product->get_stock_status();
+                $content = '<div class="plugincy-stock-status ' . $element['type'] . ' plugincy-stock-' . $stock_status . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . ucfirst($stock_status) . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
+            case 'product_sku':
+                $sku = $wc_product->get_sku();
+                $content = '<div class="plugincy-sku ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . $sku . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
+            case 'si':
+                $content = '<div class="plugincy-si ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . $row_count . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
 
-                case 'custom_text':
-                    $content .= '<div class="plugincy-custom-text ' . $element['type'] . '">' . esc_html($element['content']) . '</div>';
-                    break;
-            }
+            case 'custom_text':
+                $content = '<div class="plugincy-custom-text ' . $element['type'] . '"><span class="prefix">' . (isset($content_settings["prefix_text"]) ? esc_html($content_settings["prefix_text"]) : '') . '</span>' . (isset($content_settings["custom_content"]) ? esc_html($content_settings["custom_content"]) : esc_html($element['content'])) . '<span class="suffix">' . (isset($content_settings["suffix_text"]) ? esc_html($content_settings["suffix_text"]) : '') . '</span></div>';
+                break;
         }
 
         return $content;

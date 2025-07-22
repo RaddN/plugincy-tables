@@ -219,7 +219,11 @@
                     "type": "checkbox",
                     "name": "enable_lightbox",
                     "title": "Enable Lightbox",
-                    "default": false,
+                    "checkboxOptions": [
+                        "on",
+                        "off"
+                    ],
+                    "default": "on",
                     "description": "Open image in lightbox on click"
                 }
             ],
@@ -337,6 +341,85 @@
         }
     },
     {
+        "el_name": "View Details Button",
+        "el_type": "view_details",
+        "el_description": "Interactive View Details button",
+        "el_customization_options": {
+            "content": [
+                {
+                    "type": "text",
+                    "name": "button_text",
+                    "title": "Button Text",
+                    "default": "View Details",
+                    "description": "Custom text for the button"
+                },
+                {
+                    "type": "select",
+                    "name": "button_type",
+                    "title": "Button Type",
+                    "options": [
+                        {
+                            "value": "button ",
+                            "label": "Button"
+                        },
+                        {
+                            "value": "text ",
+                            "label": "Text"
+                        }
+                    ],
+                    "default": "text "
+                }
+            ],
+            "style": [
+                {
+                    ".add_to_cart button": [
+                        {
+                            "type": "color",
+                            "name": "background-color",
+                            "title": "Background Color",
+                            "default": "#0073aa"
+                        },
+                        {
+                            "type": "color",
+                            "name": "color",
+                            "title": "Text Color",
+                            "default": "#ffffff"
+                        },
+                        {
+                            "type": "number",
+                            "name": "border-radius",
+                            "title": "Border Radius",
+                            "unit": "px",
+                            "default": 4,
+                            "min": 0,
+                            "max": 50
+                        },
+                        {
+                            "type": "select",
+                            "name": "width",
+                            "title": "Button Size",
+                            "options": [
+                                {
+                                    "value": "40%",
+                                    "label": "Small"
+                                },
+                                {
+                                    "value": "50%",
+                                    "label": "Medium"
+                                },
+                                {
+                                    "value": "100%",
+                                    "label": "Large"
+                                }
+                            ],
+                            "default": "medium"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
         "el_name": "Short Description",
         "el_type": "short_description",
         "el_description": "Product short description",
@@ -346,7 +429,11 @@
                     "type": "checkbox",
                     "name": "text-overflow",
                     "title": "Show Ellipsis (...)",
-                    "default": true,
+                    "checkboxOptions": [
+                        "on",
+                        "off"
+                    ],
+                    "default": "on",
                     "description": "Show '...' at the end when text is truncated"
                 },
                 {
@@ -392,7 +479,11 @@
                     "type": "checkbox",
                     "name": "show_count",
                     "title": "Show Review Count",
-                    "default": true,
+                    "checkboxOptions": [
+                        "on",
+                        "off"
+                    ],
+                    "default": "on",
                     "description": "Display number of reviews"
                 },
                 {
@@ -459,15 +550,30 @@
                     "type": "checkbox",
                     "name": "show_icons",
                     "title": "Show Category Icons",
-                    "default": true,
+                    "checkboxOptions": [
+                        "on",
+                        "off"
+                    ],
+                    "default": "on",
                     "description": "Display icons next to category names"
                 },
                 {
                     "type": "checkbox",
                     "name": "link_category",
                     "title": "Link Category",
-                    "default": true,
+                    "checkboxOptions": [
+                        "on",
+                        "off"
+                    ],
+                    "default": "on",
                     "description": "Link to category pages"
+                },
+                {
+                    "type": "text",
+                    "name": "seperator",
+                    "title": "Seperate By",
+                    "default": ",",
+                    "description": "Category Seperate By (eg. , )"
                 }
             ],
             "style": [
@@ -523,15 +629,30 @@
                     "type": "checkbox",
                     "name": "show_icons",
                     "title": "Show Tag Icons",
-                    "default": true,
+                    "checkboxOptions": [
+                        "on",
+                        "off"
+                    ],
+                    "default": "on",
                     "description": "Display icons next to tag names"
                 },
                 {
                     "type": "checkbox",
                     "name": "link_tags",
                     "title": "Link Tags",
-                    "default": true,
+                    "checkboxOptions": [
+                        "on",
+                        "off"
+                    ],
+                    "default": "on",
                     "description": "Link to tag pages"
+                },
+                {
+                    "type": "text",
+                    "name": "seperator",
+                    "title": "Seperate By",
+                    "default": ",",
+                    "description": "Tags Seperate By (eg. , )"
                 }
             ],
             "style": [
@@ -615,9 +736,8 @@
                             "title": "In Stock Background Color",
                             "default": "#eefff2"
                         }
-                        
                     ],
-                    ".stock_status.plugincy-stock-outofstock":[
+                    ".stock_status.plugincy-stock-outofstock": [
                         {
                             "type": "color",
                             "name": "color",
@@ -631,7 +751,7 @@
                             "default": "#ffedef"
                         }
                     ],
-                    ".stock_status.plugincy-stock-instock,.stock_status.plugincy-stock-outofstock":[
+                    ".stock_status.plugincy-stock-instock,.stock_status.plugincy-stock-outofstock": [
                         {
                             "type": "number",
                             "name": "font-size",
@@ -668,17 +788,41 @@
         }
     },
     {
+        "el_name": "Product SKU",
+        "el_type": "product_sku",
+        "el_description": "Display Product SKU",
+        "el_customization_options": {
+            "content": [],
+            "style": [
+                {}
+            ]
+        }
+    },
+    {
+        "el_name": "SI",
+        "el_type": "si",
+        "el_description": "Display Serial No.",
+        "el_customization_options": {
+            "content": [],
+            "style": [
+                {}
+            ]
+        }
+    },
+    {
         "el_name": "Custom Text",
         "el_type": "custom_text",
         "el_description": "Add your own custom text",
         "el_customization_options": {
-            "content": [{
-                            "type": "textarea",
-                            "name": "custom_content",
-                            "title": "Custom Text",
-                            "default": "Custom Text",
-                            "description": "Enter your custom text content"
-                        }],
+            "content": [
+                {
+                    "type": "textarea",
+                    "name": "custom_content",
+                    "title": "Custom Text",
+                    "default": "Custom Text",
+                    "description": "Enter your custom text content"
+                }
+            ],
             "style": [
                 {
                     ".custom_text": [
@@ -716,6 +860,41 @@
                                 }
                             ],
                             "default": "normal"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "el_name": "Customize Table",
+        "el_type": "product_table",
+        "el_description": "Table Layouts Customize",
+        "el_customization_options": {
+            "content": [],
+            "style": [
+                {
+                    ".plugincy-editable-table,.plugincy-product-table":[
+                        {
+                            "type": "color",
+                            "name": "background-color",
+                            "title": "Background Color",
+                            "default": "#0073aa"
+                        },
+                        {
+                            "type": "color",
+                            "name": "color",
+                            "title": "Text Color",
+                            "default": "#ffffff"
+                        },
+                        {
+                            "type": "number",
+                            "name": "border-radius",
+                            "title": "Border Radius",
+                            "unit": "px",
+                            "default": 4,
+                            "min": 0,
+                            "max": 50
                         }
                     ]
                 }

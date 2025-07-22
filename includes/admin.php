@@ -19,7 +19,6 @@ class Plugincy_TablesAdmin {
         $this->Plugincy_AllTablesAdmin = new Plugincy_AllTablesAdmin();
         $this->Plugincy_add_table = new Plugincy_add_table();
         $this->Plugincy_settings = new Plugincy_settings();
-        
     }
 
      public function add_admin_menu()
