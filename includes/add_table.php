@@ -6,27 +6,31 @@ if (!defined('ABSPATH')) {
 /**
  * add_table.php for the plugin.
  *
- * @package Plugincy Tables
+ * @package Product Table for WooCommerce
  */
 
-class Plugincy_add_table
+class WCProductTab_add_table
 {
 
     private $table_name;
     private $elements_json;
-    private $Plugincy_Tables_Helper;
+    private $WCProductTab_Tables_Helper;
 
     public function __construct()
     {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'plugincy_tables';
         $this->elements_json = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'elements.json'), true);
-        $this->Plugincy_Tables_Helper = new Plugincy_Tables_Helper();
+        $this->WCProductTab_Tables_Helper = new WCProductTab_Tables_Helper();
     }
 
     public function admin_page_add_table()
     {
-        $edit_id = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
+        $edit_id = 0;
+        if (isset($_GET['nonce']) && wp_verify_nonce(sanitize_key(wp_unslash($_GET['nonce'])), 'edit_table')) {
+            $edit_id = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
+        }
+
         $table_data = null;
 
         if ($edit_id) {
@@ -79,8 +83,8 @@ class Plugincy_add_table
                     <div class="plugincy-shortcode-section" <?php echo !$edit_id ? 'style="display:none;"' : ''; ?>>
                         <h3>Shortcode</h3>
                         <div class="plugincy-shortcode-display">
-                            <code id="table-shortcode">[plugincy_table id="<?php echo $edit_id; ?>"]</code>
-                            <button type="button" class="button button-small copy-shortcode" data-shortcode="[plugincy_table id=&quot;<?php echo $edit_id; ?>&quot;]">Copy</button>
+                            <code id="table-shortcode">[plugincy_table id="<?php echo esc_attr($edit_id); ?>"]</code>
+                            <button type="button" class="button button-small copy-shortcode" data-shortcode="[plugincy_table id=&quot;<?php echo esc_attr($edit_id); ?>&quot;]">Copy</button>
                         </div>
                         <p class="description">Use this shortcode to display the table on any page or post.</p>
                     </div>
@@ -195,7 +199,7 @@ class Plugincy_add_table
                                             <h3>No Products Found</h3>
                                             <p><strong>WooCommerce products are required to create product tables.</strong></p>
                                             <p>Please add products to your WooCommerce store first.</p>
-                                            <a href="<?php echo admin_url('post-new.php?post_type=product'); ?>" class="button button-primary">Add Your First Product</a>
+                                            <a href="<?php echo esc_url(admin_url('post-new.php?post_type=product')); ?>" class="button button-primary">Add Your First Product</a>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -252,7 +256,7 @@ class Plugincy_add_table
                                     <label for="selected-products">Select Products</label>
                                     <select id="selected-products" name="selected_products[]" multiple style="height: 200px;">
                                         <?php foreach ($products as $product): ?>
-                                            <option value="<?php echo $product->ID; ?>"
+                                            <option value="<?php echo esc_attr($product->ID); ?>"
                                                 <?php echo in_array($product->ID, $query_settings['selected_products'] ?? []) ? 'selected' : ''; ?>>
                                                 <?php echo esc_html($product->post_title); ?>
                                             </option>
@@ -271,7 +275,7 @@ class Plugincy_add_table
                                 <div class="plugincy-form-group">
                                     <label for="products-per-page">Products Per Page</label>
                                     <input type="number" id="products-per-page" name="products_per_page"
-                                        value="<?php echo $query_settings['products_per_page'] ?? 10; ?>" min="1" max="100">
+                                        value="<?php echo isset($query_settings['products_per_page']) ? esc_attr($query_settings['products_per_page']) : 10; ?>" min="1" max="100">
                                     <p class="description">Maximum number of products to display in the table (1-100).</p>
                                 </div>
 
@@ -340,10 +344,10 @@ class Plugincy_add_table
                         <button type="submit" name="plugincy_save_table" class="button button-primary">
                             <?php echo $edit_id ? 'Update Table' : 'Create Table'; ?>
                         </button>
-                        <a href="<?php echo admin_url('admin.php?page=plugincy-tables'); ?>" class="button">Cancel</a>
+                        <a href="<?php echo esc_url(admin_url('admin.php?page=plugincy-tables')); ?>" class="button">Cancel</a>
                     </div>
 
-                    <input type="hidden" name="edit_id" value="<?php echo $edit_id; ?>">
+                    <input type="hidden" name="edit_id" value="<?php echo esc_attr($edit_id); ?>">
                     <input type="hidden" name="table_data" id="table-data-input" value="">
                 </form>
             </div>
@@ -397,17 +401,17 @@ class Plugincy_add_table
 <?php
     }
 
-    // Add this AJAX handler method to the Plugincy_add_table class
+    // Add this AJAX handler method to the WCProductTab_add_table class
 
     public function ajax_get_preview_products()
     {
         check_ajax_referer('plugincy_nonce', 'nonce');
 
-        $query_settings = json_decode(stripslashes($_POST['query_settings']), true);
+        $query_settings = isset($_POST['query_settings']) ? json_decode(stripslashes(sanitize_text_field(wp_unslash($_POST['query_settings']))), true) : [];
         $excluded_products = isset($_POST['excluded_products']) ? array_map('intval', $_POST['excluded_products']) : array();
-        $table_data = isset($_POST['table_data']) ? json_decode(stripslashes($_POST['table_data']), true) : null;
+        $table_data = isset($_POST['table_data']) ? json_decode(stripslashes(sanitize_text_field(wp_unslash($_POST['table_data']))), true) : null;
 
-        $products = $this->Plugincy_Tables_Helper->get_products_for_table([], $query_settings, $excluded_products);
+        $products = $this->WCProductTab_Tables_Helper->get_products_for_table([], $query_settings, $excluded_products);
 
         $html = '';
         $row_count = 1;
@@ -416,7 +420,7 @@ class Plugincy_add_table
             $wc_product = wc_get_product($product->ID);
             if ($wc_product) {
                 if ($table_data && isset($table_data['rows'])) {
-                    $row_template_index = $product_index % count($table_data['rows']);
+                    $row_template_index = 0 % count($table_data['rows']);
                     $current_row_template = $table_data['rows'][$row_template_index];
 
                     $html .= '<tr class="plugincy-product-preview-row" data-product-id="' . $product->ID . '" data-row-template="' . $row_template_index . '">';
@@ -463,13 +467,13 @@ class Plugincy_add_table
         foreach ($selector as $key) {
             // Generate styles from settings
             if ($key !== "content_settings") {
-                $styles .= $this->Plugincy_Tables_Helper->generate_element_styles($settings[$key], $key);
+                $styles .= $this->WCProductTab_Tables_Helper->generate_element_styles($settings[$key], $key);
             }
         }
 
-        $output = $this->Plugincy_Tables_Helper->render_cell_content_html($wc_product, $element, $row_count);
+        $output = $this->WCProductTab_Tables_Helper->render_cell_content_html($wc_product, $element, $row_count);
 
-        $output .= '<style>' . $styles . '</style>';
+        $output .= '<style>' . esc_html($styles) . '</style>';
 
         // $output .= json_encode(array(
         //     'type' => $element['type'],
@@ -484,24 +488,26 @@ class Plugincy_add_table
     {
         global $wpdb;
 
-        $title = sanitize_text_field($_POST['table_title']);
-        $table_data = stripslashes($_POST['table_data']);
-        $edit_id = intval($_POST['edit_id']);
+        check_ajax_referer('plugincy_save_table', 'plugincy_nonce');
+
+        $title = isset($_POST['table_title']) ? sanitize_text_field(wp_unslash($_POST['table_title'])) : "";
+        $table_data = isset($_POST['table_data']) ? stripslashes(sanitize_text_field(wp_unslash($_POST['table_data']))) : [];
+        $edit_id = isset($_POST['edit_id']) ? intval(sanitize_text_field(wp_unslash($_POST['edit_id']))) : 0;
 
         // Save query settings
         $query_settings = array(
-            'query_type' => sanitize_text_field($_POST['query_type']),
-            'selected_categories' => isset($_POST['selected_categories']) ? array_map('sanitize_text_field', $_POST['selected_categories']) : array(),
-            'selected_tags' => isset($_POST['selected_tags']) ? array_map('sanitize_text_field', $_POST['selected_tags']) : array(),
-            'selected_products' => isset($_POST['selected_products']) ? array_map('intval', $_POST['selected_products']) : array(),
+            'query_type' => isset($_POST['query_type']) ? sanitize_text_field(wp_unslash($_POST['query_type'])) : "",
+            'selected_categories' => isset($_POST['selected_categories']) ? array_map('sanitize_text_field', wp_unslash($_POST['selected_categories'])) : array(),
+            'selected_tags' => isset($_POST['selected_tags']) ? array_map('sanitize_text_field', wp_unslash($_POST['selected_tags'])) : array(),
+            'selected_products' => isset($_POST['selected_products']) ? array_map('intval', wp_unslash($_POST['selected_products'])) : array(),
             'excluded_products' => isset($_POST['excluded_products'])
                 ? array_map('intval', is_array($_POST['excluded_products'])
                     ? $_POST['excluded_products']
-                    : array_filter(array_map('trim', explode(',', $_POST['excluded_products']))))
+                    : array_filter(array_map('trim', explode(',', sanitize_text_field(wp_unslash($_POST['excluded_products']))))))
                 : array(),
-            'products_per_page' => intval($_POST['products_per_page']),
-            'order_by' => sanitize_text_field($_POST['order_by']),
-            'order' => sanitize_text_field($_POST['order'])
+            'products_per_page' => isset($_POST['products_per_page']) ? intval(sanitize_text_field(wp_unslash($_POST['products_per_page']))) : 10,
+            'order_by' => isset($_POST['order_by']) ? sanitize_text_field(wp_unslash($_POST['order_by'])) : "date",
+            'order' => isset($_POST['order']) ? sanitize_text_field(wp_unslash($_POST['order'])) : "desc"
         );
 
         // Combine table data with query settings
@@ -534,14 +540,15 @@ class Plugincy_add_table
             );
         }
 
+        $nonce = wp_create_nonce('edit_table');
         if ($result !== false) {
             $table_id = $edit_id > 0 ? $edit_id : $wpdb->insert_id;
             $message = $edit_id > 0 ? 'Table updated successfully!' : 'Table created successfully!';
-            wp_redirect(admin_url('admin.php?page=plugincy-add-table&edit=' . $table_id . '&message=' . urlencode($message) . '&type=success'));
+            wp_redirect(admin_url('admin.php?page=plugincy-add-table&edit=' . $table_id . '&nonce=' . $nonce . '&message=' . urlencode($message) . '&type=success'));
             exit;
         } else {
             $message = 'Failed to save table.';
-            wp_redirect(admin_url('admin.php?page=plugincy-add-table&message=' . urlencode($message) . '&type=error'));
+            wp_redirect(admin_url('admin.php?page=plugincy-add-table&nonce=' . $nonce . '&message=' . urlencode($message) . '&type=error'));
             exit;
         }
     }

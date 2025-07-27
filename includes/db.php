@@ -2,13 +2,13 @@
 /**
  * Database connection and query functions.
  *
- * @package Plugincy Tables
+ * @package Product Table for WooCommerce
  */
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class Plugincy_TablesDB {
+class WCProductTab_TablesDB {
 
     private $table_name;
 

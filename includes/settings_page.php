@@ -6,10 +6,10 @@ if (!defined('ABSPATH')) {
 /**
  * Admin functions for the plugin.
  *
- * @package Plugincy Tables
+ * @package Product Table for WooCommerce
  */
 
-class Plugincy_settings
+class WCProductTab_settings
 {
 
     public function __construct()

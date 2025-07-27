@@ -1,13 +1,15 @@
 <?php
 
 /**
- * Plugin Name: Plugincy Tables
+ * Plugin Name: Product Table for WooCommerce
+ * Plugin URI:  https://plugincy.com/product-table-woocommerce/
  * Description: Create custom WooCommerce product tables with shortcodes
  * Version: 1.0.0
  * Author: Plugincy
- * Requires PHP: 7.4
- * WC requires at least: 5.0
- * WC tested up to: 8.0
+ * Author URI: https://plugincy.com
+ * license: GPL2
+ * Text Domain: product-table-woocommerce
+ * Requires Plugins: woocommerce
  */
 
 if (!defined('ABSPATH')) {
@@ -21,44 +23,44 @@ require_once plugin_dir_path(__FILE__) . 'includes/add_table.php';
 require_once plugin_dir_path(__FILE__) . 'includes/settings_page.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class_helper.php';
 
-class PlugincyTables
+class WCProductTab_INIT
 {
 
     private $table_name;
-    private $Plugincy_TablesDB;
-    private $Plugincy_TablesAdmin;
-    private $Plugincy_add_table;
-    private $Plugincy_AllTablesAdmin;
-    private $Plugincy_Tables_Helper;
+    private $WCProductTab_TablesDB;
+    private $WCProductTab_TablesAdmin;
+    private $WCProductTab_add_table;
+    private $WCProductTab_AllTablesAdmin;
+    private $WCProductTab_Tables_Helper;
 
     public function __construct()
     {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'plugincy_tables';
-        $this->Plugincy_TablesDB = new Plugincy_TablesDB();
-        $this->Plugincy_TablesAdmin = new Plugincy_TablesAdmin();
-        $this->Plugincy_add_table = new Plugincy_add_table();
-        $this->Plugincy_AllTablesAdmin = new Plugincy_AllTablesAdmin();
-        $this->Plugincy_Tables_Helper = new Plugincy_Tables_Helper();
+        $this->WCProductTab_TablesDB = new WCProductTab_TablesDB();
+        $this->WCProductTab_TablesAdmin = new WCProductTab_TablesAdmin();
+        $this->WCProductTab_add_table = new WCProductTab_add_table();
+        $this->WCProductTab_AllTablesAdmin = new WCProductTab_AllTablesAdmin();
+        $this->WCProductTab_Tables_Helper = new WCProductTab_Tables_Helper();
 
 
         add_action('init', array($this, 'init'));
-        add_action('admin_menu', array($this->Plugincy_TablesAdmin, 'add_admin_menu'));
+        add_action('admin_menu', array($this->WCProductTab_TablesAdmin, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
         add_action('admin_init', array($this, 'handle_form_submissions'));
-        add_shortcode('plugincy_table', array($this->Plugincy_Tables_Helper, 'render_table_shortcode'));
+        add_shortcode('plugincy_table', array($this->WCProductTab_Tables_Helper, 'render_table_shortcode'));
 
-        add_action('wp_ajax_plugincy_get_preview_products', array($this->Plugincy_add_table, 'ajax_get_preview_products'));
+        add_action('wp_ajax_plugincy_get_preview_products', array($this->WCProductTab_add_table, 'ajax_get_preview_products'));
 
-        register_activation_hook(__FILE__, array($this->Plugincy_TablesDB, 'create_table'));
+        register_activation_hook(__FILE__, array($this->WCProductTab_TablesDB, 'create_table'));
     }
 
     public function init()
     {
         if (!class_exists('WooCommerce')) {
             add_action('admin_notices', function () {
-                echo '<div class="notice notice-error"><p>Plugincy Tables requires WooCommerce to be installed and activated.</p></div>';
+                echo '<div class="notice notice-error"><p>Product Table for WooCommerce requires WooCommerce to be installed and activated.</p></div>';
             });
             return;
         }
@@ -72,7 +74,7 @@ class PlugincyTables
 
             // Localize script to pass data to JavaScript
             wp_localize_script('plugincy-admin-js', 'plugincy_ajax ', array(
-                'ajax_url' => admin_url('admin-ajax.php'),
+                'ajax_url' => esc_url(admin_url('admin-ajax.php')),
                 'nonce' => wp_create_nonce('plugincy_nonce'),
                 'elements_json' => json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'includes/elements.json'), true)
             ));
@@ -88,15 +90,15 @@ class PlugincyTables
     public function handle_form_submissions()
     {
         // Handle table creation/update
-        if (isset($_POST['plugincy_save_table']) && wp_verify_nonce($_POST['plugincy_nonce'], 'plugincy_save_table')) {
-            $this->Plugincy_add_table->save_table();
+        if (isset($_POST['plugincy_save_table']) && isset($_POST['plugincy_nonce']) && wp_verify_nonce(sanitize_key(wp_unslash($_POST['plugincy_nonce'])), 'plugincy_save_table')) {
+            $this->WCProductTab_add_table->save_table();
         }
 
         // Handle table deletion
-        if (isset($_GET['action']) && $_GET['action'] === 'delete_table' && isset($_GET['id']) && wp_verify_nonce($_GET['_wpnonce'], 'delete_table_' . $_GET['id'])) {
-            $this->Plugincy_AllTablesAdmin->delete_table();
+        if (isset($_GET['action']) && isset($_GET['_wpnonce']) && $_GET['action'] === 'delete_table' && isset($_GET['id']) && wp_verify_nonce(sanitize_key(wp_unslash($_GET['_wpnonce'])), 'delete_table_' . sanitize_text_field(wp_unslash($_GET['id'])))) {
+            $this->WCProductTab_AllTablesAdmin->delete_table();
         }
     }
 }
 
-new PlugincyTables();
+new WCProductTab_INIT();

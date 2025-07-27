@@ -3,13 +3,13 @@
 /**
  * class_helper.php
  *
- * @package Plugincy Tables
+ * @package Product Table for WooCommerce
  */
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class Plugincy_Tables_Helper
+class WCProductTab_Tables_Helper
 {
     private $table_name;
 
@@ -127,11 +127,10 @@ class Plugincy_Tables_Helper
     }
     public function generate_table_html($table_data, $products)
     {
-
         $html = '';
         $html .= "<style>";
         foreach ($table_data['rows'][0] as $cell) {
-            $cell_settings = $cell['elements'][0];
+            $cell_settings = isset($cell['elements'][0]) ? $cell['elements'][0] : [];
             $selector = isset($cell_settings['settings']) ? array_keys($cell_settings['settings']) : [];
             foreach ($selector as $key) {
                 if ($key !== "content_settings") {
@@ -215,7 +214,6 @@ class Plugincy_Tables_Helper
     {
 
         $content_settings = isset($element["settings"]) && isset($element["settings"]["content_settings"]) ? $element["settings"]["content_settings"] : [];
-        error_log(json_encode($element));
         $content = '';
         switch ($element['type']) {
             case 'product_title':
